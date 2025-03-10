@@ -2,6 +2,8 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from sklearn.metrics import precision_score
+
+from dataset_loader import load_dataset
 from trustscore import TrustScore
 import config  # 导入超参数配置
 
@@ -10,12 +12,7 @@ model = tf.keras.models.load_model(config.TS_MODEL_SAVE_PATH)
 print("已成功加载模型")
 
 # 加载测试数据
-if config.DATASET == "MNIST":
-    (_, _), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
-    X_test = X_test[..., np.newaxis]
-elif config.DATASET == "CIFAR10":
-    (_, _), (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
-    y_test = y_test.flatten()
+X_test, y_test = load_dataset(config.DATASET)
 
 # 归一化
 X_test = X_test / 255.0
@@ -50,12 +47,12 @@ for percentile in percentiles:
     precision = precision_score(percentile_y_test, percentile_y_pred, average='weighted')
     precisions.append(precision)
 
-# 绘制精度随分位数变化的趋势
-plt.plot(percentiles, precisions, color='purple', label="Trust Score")
+# 绘制精度随分位数变化的趋势，风格与LSH图相同
+plt.figure(figsize=(8, 6))
+plt.plot(percentiles, precisions, 'm-', label="Trust Score Precision", linewidth=2)
 plt.xlabel("Percentile Level")
 plt.ylabel("Precision")
-plt.title(f"Precision vs Percentile for Trust Score")
+plt.title("Precision vs. Percentile for Trust Score")
 plt.legend()
-
-# 显示图像
+plt.grid()
 plt.show()

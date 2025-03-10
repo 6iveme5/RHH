@@ -4,17 +4,13 @@ import matplotlib.pyplot as plt
 from tensorflow.keras import layers, models
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from trustscore import TrustScore
 import config  # 导入超参数配置
+from dataset_loader import load_dataset
 
 # 加载数据集
-if config.DATASET == "MNIST":
-    (X_train, y_train), (X_test, y_test) = tf.keras.datasets.mnist.load_data()
-    X_train, X_test = X_train[..., np.newaxis], X_test[..., np.newaxis]  # 增加通道维度
-elif config.DATASET == "CIFAR10":
-    (X_train, y_train), (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
-    y_train = y_train.flatten()  # 修正 flatten() 方式
-    y_test = y_test.flatten()
+X_train, y_train = load_dataset(config.DATASET, split="train")
+X_test, y_test = load_dataset(config.DATASET, split="test")
+
 
 # 归一化
 X_train, X_test = X_train / 255.0, X_test / 255.0
@@ -24,6 +20,8 @@ X_train, X_val, y_train, y_val = train_test_split(
     X_train, y_train, test_size=config.validation_split, random_state=42
 )
 
+# 打印数据形状以确保正确
+print(f"训练数据形状: {X_train.shape}, 验证数据形状: {X_val.shape}, 测试数据形状: {X_test.shape}")
 
 def build_model(input_shape, num_classes):
     model = models.Sequential([
@@ -41,7 +39,7 @@ def build_model(input_shape, num_classes):
                   metrics=['accuracy'])
     return model
 
-
+# 构建并训练模型
 model = build_model(X_train.shape[1:], config.num_classes)
 history = model.fit(X_train, y_train, epochs=config.epochs, validation_data=(X_val, y_val))
 
@@ -52,19 +50,4 @@ print(f"测试集准确率: {accuracy:.4f}")
 
 # 保存模型
 model.save(config.TS_MODEL_SAVE_PATH)
-print("模型已保存到"+ config.TS_MODEL_SAVE_PATH)
-
-# 计算 Trust Score
-ts = TrustScore()
-ts.fit(X_train.reshape(X_train.shape[0], -1), y_train)
-
-trust_scores = ts.get_score(X_test.reshape(X_test.shape[0], -1), y_pred)
-
-# 画出 Trust Score 分布，并添加 epoch 和数据集信息
-plt.figure(figsize=(8, 6))
-plt.hist(trust_scores, bins=20, alpha=0.7, label="Trust Score")
-plt.xlabel("Trust Score")
-plt.ylabel("Frequency")
-plt.legend()
-plt.title(f"Trust Score Distribution\nDataset: {config.DATASET}, Epochs: {config.epochs}")
-plt.show()
+print("模型已保存到 "+ config.TS_MODEL_SAVE_PATH)
